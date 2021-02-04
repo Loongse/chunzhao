@@ -260,5 +260,40 @@ Integer是int的包装类型，在拆箱与装箱中，二者自动转换。int�
 
 Integer对象会占用更多的内存 。Integer是一个对象，需要存储对象的元数据。但是int是一个原始类型的数据，所以占用的空间更少。
 
+### String , StringBuffer , StringBuilder区别
+
+String是字符串常量，final修饰；StringBuffer是字符串变量（线程安全）；StringBuilder是字符串变量（线程不安全）
+
+### String和StringBuffer
+
+string和string buffer主要区别是性能，因为string是不可变对象，所以每次对string类型进行操作都等同于产生了一个新的string对象，然后指向新的string对象。所以尽量不在对string进行大量的拼接操作，否则会产生很多临时对象，导致GC开始工作从而影响性能。
+
+string buffer本身是对对象进行操作，而不是产生新的对象，因此有大量拼接的情况下建议使用string buffer。
+
+但是需要注意JVM会对string拼接做出一定的优化：
+
+String s=“This is only ”+”simple”+”test”会被虚拟机直接优化成String s=“This
+is only simple test”，此时就不存在拼接过程。
+
+### string buffer和string builder
+
+string buffer是线程安全的可变字符串，其内部实现是可变数组。string builder是JDK1.5新增的，功能与string buffer类似，但是非线程安全。因此，在没有多线程问题的前提下，使用string builder会取得更好的性能。
+
+### 什么是编译器常量？使用他有什么风险？
+
+公共静态不可变（public static final）变量也就是我们所说的编译器常量，这里的public可选。实际上这些变量在编译时会被替换掉，因为编译器知道这些变量的值，并且知道这些变量在运行时不能改变，这种方式存在的一个问题就是一旦使用了一个内部的或者第三方的公有编译时常量，但是这个值后面被其他人改变了，但是你的客户端仍然使用的是老的值，甚至已经部署了新的jar，为了避免这种情况，在更新依赖的时候，需要重新编译程序。
+
+### Java当中使用什么类型表示价格比较好？
+
+如果不是特别关心内存和性能的话，使用bigdecimal，否则使用预定义精度的double类型。
+
+### 如何将byte转为string？
+
+可以使用string接收byte[]参数的构造器来进行转换，但是需要注意使用正确的编码，否则会使用平台默认编码，这个编码可能与原来的编码相同，也可能不同。
+
+### 可以将int强转为byte类型吗？会产生什么问题？
+
+可以进行强制转换，但是进行强制转换的话，高位会被丢弃，byte类型的范围是-128-127
+
 
 
