@@ -321,5 +321,290 @@ Java垃圾回收机制最基本的做法是分代回收。内存中的区域被�
 
 通知GC开始工作，但是GC真正开始的时间不确定。
 
+## 进程线程相关
 
+### 进程，线程，协程的区别
+
+简而言之，进程是程序运行和资源分配的基本单位，一个程序至少有一个进程，一个进程至少有一个线程。进程在执行的过程中拥有独立的内存单元。而多个线程共享内存资源，减少切换次数，从而效率更高。线程是进程的一个实体，是CPU调度和分配的基本单位，是比程序更小的能够独立运行的基本单位。同一个进程中的多个线程之间可以并发执行。
+
+协程不是被操作系统内核所管理，而完全是由程序所控制（也就是在用户态执行）。
+
+这样带来的好处就是性能得到了很大的提升，不会像线程切换那样消耗资源。
+
+### 守护线程？与非守护线程有什么区别？
+
+程序在运行完毕后，jvm会等待非守护线程完成后关闭，但是JVM不会等待守护线程。守护线程最典型的例子就是GC线程。
+
+### 什么是多线程的上下文切换？
+
+多线程的上下文切换是指CPU控制权由一个已经正在运行的线程切换到另外一个就绪并等待获取CPU执行权的线程的过程。
+
+### 创建线程的方式？有什么区别？
+
+通过实现Runnable接口或者通过拓展Thread类。相比扩展Thread，实现Runnable接口更优：
+
+- Java不支持多继承，因此继承Thread类就代表这个子类不能扩展其他类。而实现Runnable接口的类还可以在扩展一个类。
+- 类可能只需要可执行即可，因此继承整个Thread类的开销过大
+
+### Thread类的start和run方法有什么区别
+
+start方法被用来启动新创建的线程，而且其内部调用了run方法，这和直接调用run方法的效果不一样。当调用run方法的时候，只会在原来的线程中调用，没有新的线程启动，start方法才会启动新线程。
+
+### 怎么检测一个线程是否持有对象监视器？
+
+Thread类提供了一个holdLock(Object)方法，当且仅当obj的监视器被某条线程持有的时候才会返回true，注意这是一个static方法，所以意味着某条线程指的是当前线程。
+
+### Runnable和Callable的区别
+
+Runnable接口中的run方法的返回值是void，他做的事情只是纯粹的去执行run方法中的代码；Callable接口中的call方法是由返回值的，是一个泛型，和Future,FutureTask配合可以用来获取异步执行的结果。
+
+这其实是一个很有用的特称，因为多线程相比单线程更难、更复杂的一个重要原因就是多线程充满着未知性，某线程是否执行了？某线程执行了多久？某线程执行的时候期望的数据是否已经赋值完毕？无法得知，我们能够做的仅仅是等待线程的任务执行完毕而已。但是Callable+Future/FutureTask配合可以方便获取多线程的结果，可以在等待时间太长没获取到需要的数据的情况下取消该线程的任务。
+
+### 什么导致线程阻塞？
+
+阻塞指的是暂停一个线程的执行以等待某个条件发生（如某资源就绪），Java提供了多个方法来支持阻塞：
+
+| 方法                | 说明                                                         |
+| ------------------- | ------------------------------------------------------------ |
+| sleep()             | sleep()允许指定以毫秒为单位的一段时间作为参数，它使得线程在指定的时间内进入阻塞状态，不能够得到CPU时间，指定的时间一过，线程重新回到可执行的状态。典型的，sleep()被用在等待某个资源就绪的情形；测试发现条件不满足后，让线程阻塞一段时间后重新测试，直到条件满足为止。 |
+| suspend()和resume() | 两个方法配套使用,suspend()使得线程进入阻塞状态并且不会自动恢复，必须其对应的resume()被调用，才能使得线程重新进入到可执行状态。典型的，suspend()和resume()被用在等待另一个线程产生的结果的情形。测试发现结果还没有产生就等待，当另一个线程产生了结果后，调用resume()使其恢复。 |
+| yield()             | yield()使得当前线程放弃已经分得的CPU时间，但不使当前线程阻塞，即线程仍处于可执行状态，随时可能再次分的CPU时间，调用yield()的效果等价于调度程序认为该线程已执行了足够的时间从而转到另一个线程。 |
+| wait()和notify()    | 两个方法配套使用，wait()使得线程进入到阻塞状态，他有两种形式，一种允许指定以毫秒为单位的一段时间作为参数，另一种没有参数，前者当对notify()被调用或者超出指定时间线程重新进入到可执行状态，后者则必须对应的notify()被调用。 |
+
+### wait(),notify()和suspend(),resume()之间的区别
+
+wait()在阻塞的时候会释放锁。
+
+wait()属于object类，也就是说，所有的对象都拥有这一对方法。因为这一对方法阻塞时要释放占用的锁，而琐是所有的对象都具有的，调用任意对象的wait()方法导致线程阻塞，并且该对象上的锁被释放。而调用任意对象的notify()方法则导致从调用该对象wait()方法而阻塞的线程中随机选择一个解除阻塞（但是要等到获得锁后才会真正执行）
+
+其次，前面叙述的所有方法都可以在任意位置调用，但是wait()和notify()方法需要在synchronized方法或者块中调用，理由也很简单，因为只有在synchronized方法或者块中当前线程才占用锁，才有锁可以被释放。同样的道理，调用这一对方法的对象上的锁必须为当前线程所拥有，这样才有锁可以释放。因此，这一对方法调用必须放入synchronized中，该方法或者块上的上锁对象就是调用这一对方法的对象。若不满足这一条件，程序虽然可以编译，但是在运行的时候会抛出illegalmonitorstateexception异常。
+
+wait()和notify()方法的上述特征决定了他们经常和synchronized和关键字一起使用，将他们和操作系统进程间通信机制做一个比较就会发现其相似性，synchronized方法或块所提供了类似于操作系统原语的功能，它们的执行不会受到多线程机制的干扰，而这一对方法则相当于block和weakup原语（这一对方法均声明为synchronized）。他们的结合使得我们可以实现操作系统上一系列精妙的进程间通信的算法，比如信号量算法，并且用于解决各种复杂的线程间通信问题。
+
+关于wait()和notify():
+
+1. 调用Notify()方法导致解除阻塞的线程是从因调用该对象的wait()方法而阻塞的线程中随机抽取的，我们无法预料哪一个线程会被选择，所以需要特别小心，避免因此不稳定性产生的问题。
+2. 除了notify()之外，还有一个notifyAll()方法，唯一的区别在于notifyAll()方法将把因调用该对象的wait()方法而阻塞的所有线程一次性全部解除阻塞。当然，只有获得锁的那一个线程才会进入可执行状态。
+
+谈到阻塞，死锁也就不可避免了，suspend()方法和不指定超时期限的wait()方法都可能产生死锁。但是Java在语言级别不能避免死锁。所以需要特别小心。
+
+### 产生死锁的条件
+
+1. 互斥条件：一个资源每次只能被一个进程使用
+2. 请求与保持条件：一个进程因请求资源而阻塞时，对已经获取到的资源保持不放
+3. 不剥夺条件：进程已经获取到的资源，在未使用完之前，不能强行剥夺。
+4. 循环等待条件：若干进程之间形成一种头尾相接的循环等待资源关系
+
+### 为什么wait()方法和notify()以及notifyAll()方法要在同步块中调用
+
+这是JDK 强调的，wait()方法和notify()方法在调用前都必须获得对象的锁
+
+### wait()和notify()方法在放弃对象监视器时有什么区别
+
+wait()方法和notify()方法在放弃对象监视器时候的区别在于：wait()会立即释放对象监视器，notify()方法则会等待线程剩余代码执行完毕才会放弃对象监视器
+
+### wait()和sleep()的区别
+
+- sleepe()来自Thread类，而wait()来自Object类。调用sleep()方法的过程中，线程不会释放对象锁。但是调用wait()方法会释放对象锁。
+- sleep()睡眠后不会让出系统资源，但是wait()让其他线程可以占用CPU
+- sleep(millseconds)需要指定一个睡眠时间，时间一到就会自动唤醒，而wait()需要配合notify()或者notifyAll()使用
+
+### 为什么wait,notify和notifyAll这些方法不放在Thread类中
+
+首先，Java提供的锁时对象级别的而不是线程级别的，每个对象都有锁，通过线程获得。如果线程需要等待某些锁那么调用对象中的wait()方法就有意义了。如果wait()方法在Thread类中，线程正在等待的是哪个锁就变得不明显了，简单的说，由于wait和notify都是锁级别的操作，所以把他们定义在Object类中是因为锁属于对象。
+
+### 怎么唤醒一个阻塞的线程
+
+如果线程调用了wait(),sleep()或者join()方法而导致的阻塞，可以通过中断线程并且通过抛出interruptedexception来唤醒他；如果线程遇到了IO阻塞，无能为力，因为IO操作时系统实现的，Java代码并没有办法直接接触到操作系统。
+
+### 什么是线程的上下文切换？
+
+多线程的上下文切换是指CPU控制权有一个已经正在运行的线程切换到另外一个就绪并等待获取CPU执行权的线程的过程。
+
+### synchronized和ReentrantLock的区别
+
+synchronized是和if ,else ,for,while一样的关键字，ReentrantLock是一个类，这是二者的本质区别。既然ReentrantLock是一个类，那么就提供了比synchronized更加灵活的特性，可以被继承、可以有方法等等，ReentrantLock比synchronized的扩展性体现在几点上：
+
+1. ReentrantLock可以对获取锁的等待时间进行设置，避免了死锁
+2. ReentrantLock可以获取各种锁的信息
+3. ReentrantLock可以灵活实现多路通知
+
+另外，二者的锁机制不一样，ReentrantLock底层调用的是Unsafe的park方法加锁，而synchronized操作的时对象头中的markword
+
+### FutureTask是什么
+
+FutureTask表示一个异步运算的任务。FutureTask里面可以传入一个Callable的具体实现类，可以对这个异步运算的任务的结果等待获取，判断是否已经完成、取消任务等操作。当然，由于FutureTask也是Runnable接口的实现类，所以FutureTask也可以放入线程池中。
+
+### 一个线程如果出现了运行时异常怎么办
+
+如果这个异常没有被捕获的话，这个线程就停止执行了。另外重要的一点是：如果这个线程持有某个对象的监视器，那么这个对象监视器就会被立即释放。
+
+### Java当中有哪几种锁
+
+- 自旋锁：自旋锁在JDK1.6以后默认开启了。共享数据的锁定状态只会持续很短的时间 ，为了这一小段时间而去挂起和恢复线程有点浪费，所以这里做了一个处理，让后面请求锁的线程稍等一会，但是不放弃处理器的执行时间，看看持有锁的线程能否快速释放。为了让线程等待，所以需要让线程执行一个忙循环也就是自旋操作。在JDK6以后，引入了自适应的自旋锁，也就是等待的时间变得不固定了 ，而是有上一次在同一个锁上的自选时间及锁的拥有者状态来决定。
+- 偏向锁：目的是消除数据在无竞争情况下的同步原语。进一步提升程序的运行性能。偏向锁就是偏心的锁，意思是这个锁会偏向第一个获得他的线程，如果接下来的执行过程中，该锁没有被其他线程获取，则偏向锁的线程永远不会再进行同步。偏向锁可以提高带有同步但是无竞争的程序性能，也就是说并不一定总是对程序有利，如果程序中大多数的锁都是被多个不同的线程访问，那偏向模式就是多余的，在具体问题具体分析的前提下，可以考虑是否使用偏向锁。
+- 轻量级锁：为了减少获得锁和释放锁带来的性能消耗，引入了“偏向锁”和“轻量级锁”，所以在JDK1.6里面锁一共有四种状态：无锁状态，偏向锁状态，轻量级锁状态和重量级锁状态，他会随着竞争情况逐渐升级。锁可以升级但是不能降级，意味着偏向锁升级成为轻量级锁后就不能降级成为偏向锁了。
+
+### 如何在两个线程之间共享数据
+
+通过在线程之间共享对象就可以了，然后通过wait/notify/notifyAll,await/signal.signalAll进行等待和唤醒，比方说阻塞队列BlockingQueue就是为线程之间共享数据而设计的。
+
+### 如何正确使用wait()?使用if还是while?
+
+wait()方法应该在循环里面调用，因为当线程获取到CPU开始执行的时候，其他条件可能还没有满足，所以在处理前，循环检测条件是否满足会更好。如下：
+
+### 什么时线程局部变量ThreadLocal
+
+线程局部变量是局限于线程内部的变量，为线程自身所有，不在多个线程之间共享。Java提供了ThreadLocal类来支持线程局部变量，是一种实现线程安全的方式。但是在管理环境下使用线程局部变量需要小心，在这种情况下，工作线程的生命周期比任何的变量生命周期都长。任何线程局部变量一旦在工作完成之后没有释放，Java应用就存在内存泄漏的风险。
+
+### ThreadLocal的作用是什么
+
+简单说ThreadLocal就是一种以空间换取时间的做法在每个Thread里面维护一个ThreadLocal，ThreadLocalMap把数据进行隔离，数据不共享，自然就没有线程安全方面的问题。
+
+### 生产消费者模型的作用
+
+1. 通过平衡生产者的生产能力和消费者的消费能力来提升整个系统的运行效率，这是生产消费者最重要的作用
+2. 解耦：这是生产消费者附带的作用，解耦意味着生产者和消费者之间的联系少，联系越少越可以独自发展而不需要收到相互的制约。
+
+### 写一个生产者-消费者队列
+
+1. 通过阻塞队列实现
+
+   ```java
+   package com.jichu.duoxaincheng;
+   
+   import java.util.Random;
+   import java.util.concurrent.ArrayBlockingQueue;
+   import java.util.concurrent.BlockingQueue;
+   
+   //使用阻塞队列实现生产消费队列
+   public class SCXFByBlokingQueue {
+       public static void main(String[] args) {
+           BlockingQueue<Integer> queue = new ArrayBlockingQueue<Integer>(100);
+           Producer producer = new Producer(queue);
+           Consumer consumer = new Consumer(queue);
+           Consumer consumer1 = new Consumer(queue);
+           new Thread(producer).start();
+           new Thread(consumer).start();
+           new Thread(consumer1).start();
+       }
+   }
+   
+   //生产者类
+   class Producer implements Runnable {
+       private final BlockingQueue<Integer> queue;
+   
+       public Producer(BlockingQueue<Integer> queue) {
+           this.queue = queue;
+       }
+   
+       @Override
+       public void run() {
+           try {
+               while (true) {
+                   Thread.sleep(1000);//模拟耗时
+                   queue.put(produce());
+               }
+           } catch (InterruptedException e) {
+               e.printStackTrace();
+           }
+       }
+   
+       private Integer produce() {
+           int n = new Random().nextInt(10000);
+           System.out.println("Thread:" + Thread.currentThread().getId() + "" +
+                   " produce:" + n);
+           return n;
+       }
+   }
+   
+   //消费者
+   class Consumer implements Runnable {
+       private final BlockingQueue<Integer> queue;
+   
+       public Consumer(BlockingQueue<Integer> queue) {
+           this.queue = queue;
+       }
+   
+       @Override
+       public void run() {
+           while (true) {
+               try {
+                   //模拟耗时
+                   Thread.sleep(2000);
+                   consume(queue.take());
+               } catch (InterruptedException e) {
+                   e.printStackTrace();
+               }
+           }
+       }
+   
+       private void consume(Integer take) {
+           System.out.println("Thread:" + Thread.currentThread().getId() + " comsume:" + take);
+       }
+   }
+   ```
+
+   
+
+2. 通过wait/notify来实现
+
+   ```java
+   
+   ```
+
+   
+
+### 如果你提交任务时，线程池队列已满，这时会发生什么
+
+1. LinkedBlokingQueue:无界队列，继续添加任务到阻塞队列等待执行，因为linkedBlokingQueue可以近乎为一个无穷大的队列，可以无限存放任务
+2. ArrayBlockingQueue:等有界队列：任务首先被添加到ArrayBlockingQueue中，ArrayBlockingQueue满了，则会拒绝使用策略RejectedExecutionHandler处理满了的任务，默认是AbortPolicy
+
+### 为什么要使用线程池
+
+避免频繁的创建和销毁线程，达到线程对象的重用。另外，使用线程池还可以根据项目的灵活的控制并发的数目。
+
+### Java中用到的线程调度算法是什么
+
+抢占式。一个线程用完CPU之后，操作系统会根据线程优先级、线程饥饿情况等数据算出一个总的优先级并且分配给下一个时间片给某个线程执行。
+
+### Thread.sleep(0)的作用
+
+由于Java是抢占式的线程调度算法，因此可能会出现某条线程常常获取到CPU控制权的情况，为了让某些优先级比较低的线程也能获取到CPU的控制权，可以使用Thread.sleep(0)手动触发一次操作系统分配时间片的操作，这也是平衡CPU控制权的一种操作。
+
+### 什么是CAS
+
+CAS,全称compare and swap，即比较-替换。
+
+假设有三个操作数：内存V  旧的预期值A 要修改的值B。当且仅当预期值A和内存值V相同时，才会将内存值修改为B 并返回true。
+
+否则什么都不做并返回false。当然CAS一定需要volatile配合，这样才能保证每次拿到的变量是主内存种最新的那个值，否则旧的预期值A对于某条线程来说，永远是一个不会变的值A，只要某次CAS失败，永远都不可能成功。
+
+### ConcurrentHashMap的工作原理
+
+- jdk1.6：ConcurrentHashMap是线程安全的，但是与HashTable相比，实现线程安全的方式不同。HashTable是通过对hash表结构进行锁定，是阻塞式的，当一个线程占有这个锁时，其他线程必须阻塞等待其释放锁。ConcurrentHashMap时采用分离锁的方式，他并没有对整个hash表进行锁定，而是局部锁定，也就是说当一个线程占有这个局部锁时，不影响其他线程对hash表其他地方的访问。具体是其内部有一个segment
+- jdk1.8：ConcurrentHashMap不再使用segment分离所，而是采用了一种乐观锁CAS算法来实现同步问题，但是底层依然是数组+链表->红黑树的实现。
+
+### CyclicBarrier和CountDownLatch区别
+
+两个类非常相似，位于同一个包下面，都可以用来表示代码运行到某个点上，二者的区别在于：
+
+- CyclicBarrier的某个线程运行在某个点上之后，该线程即停止运行，知道所有线程都运行到了这个点才会重新运行所有的线程；CountDownLatch则不是，某线程运行到某个点上之后，只是给某个数值-1而已，该线程继续执行
+- CyclicBarrier只能唤起一个任务，CountDownLatch可以唤起多个任务
+- CyclicBarrier可以重用，CountDownLatch不可重用，计数值为0，该CountDownLatch就不可以再用了。
+
+### Java中的++操作符线程安全吗？
+
+不是线程安全的操作。因为它涉及到多个指令，如读取变量值、增加然后存储回内存，这个过程可能会出现多个线程交叉。
+
+### 多线程开发实践
+
+- 给线程进行命名
+- 最小化同步的范围
+- 优先使用volatile
+- 尽可能使用更高层次的并发工具而不是wait/notify来实现线程的通信，如BlockingQueue,Semeaphore
+- 优先使用并发容器而不是非同步的容器
+- 考虑使用线程池
+
+### 
 
