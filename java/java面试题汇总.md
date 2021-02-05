@@ -629,5 +629,74 @@ volatile主要有两个方面的作用
 
 例如，JVM或者JIT为了获得更好的性能会对语句进行重排序，但是volatile类型变量即使在没有同步块的情况下赋值也不会与其他语句重排序。volatile提供happens-before的保证，确保一个线程的修改能对其他线程是可见的。某些情况下，volatile还能提供原子性，比如说读64位的数据类型。
 
+## 关于集合
 
+### Java中的集合及其继承关系
 
+![集合框架](java-jichu-image\集合框架.png)
+
+### poll()方法和remove()方法区别？
+
+poll()都是从队列当中取出一个元素，但是poll()在获取元素失败的时候返回空，而remove()失败会抛出异常。
+
+### LinkedHashMap和PriorityQueue的区别
+
+PriorityQueue是一个优先级队列，保证最高或者最低优先级的元素总在队列头部，但是LinkedHashMap维持的顺序是插入的顺序。当遍历一个PriorityQueue的时候，没有任何的顺序保证，但是LInkedHashMap可以保证遍历的顺序是元素插入的顺序。
+
+### WeakHashMap与HashMap的区别是什么？
+
+WeakHashMap的工作与正常的HashMap类似，但是使用弱引用作为key，意思是当key对象没有任何引用的时候，key/value将会被回收。
+
+### ArrayList和HashMap默认大小？
+
+在Java7中，ArrayList的默认大小是10个元素，HashMap的默认大小是16个元素（必须是2的幂次方）
+
+### Comparator和Comparable区别
+
+Comparable接口用于定义对象的自然顺序，而comparator通常用于定义用户定制的顺序。comparable总是只有一个，但是可以有多个comparator来定义对象的顺序。
+
+### 如何实现集合的排序
+
+可以使用有序集合比如Tree***也可以使用有顺序的集合比如list，然后通过Collections.sort()进行排序；
+
+### 如何打印数组的内容
+
+使用Arrays.toString()和Arrays.deepToString()方法打印数组。由于数组没有实现toString()方法，所以如果将数组传递给sout方法，将无法打印数组的内容。但是Arrays.toString()可以打印。
+
+### LinkedHashMap是单向链表还是双向？
+
+双向循环链表
+
+### TreeMap由红黑树实现
+
+### 遍历ArrayList时如何正确移除一个元素
+
+### 什么是ArrayMap，他和HashMap有什么区别
+
+ArrayMap是Android提供的，用两个数组模拟map，更少占用内存空间，有更高的效率
+
+### HashMap的实现原理
+
+1. HashMap 概述： HashMap 是基于哈希表的Map 接口的非同步实现。此实现提供所有可
+选的映射操作，并允许使用null 值和null 键。此类不保证映射的顺序，特别是它不保证该顺
+序恒久不变。
+2. HashMap 的数据结构： 在java 编程语言中，最基本的结构就是两种，一个是数组，另外
+一个是模拟指针（引用），所有的数据结构都可以用这两个基本结构来构造的，HashMap
+也不例外。HashMap 实际上是一个“链表散列”的数据结构，即数组和链表的结合体。
+当我们往Hashmap 中put 元素时,首先根据key 的hashcode 重新计算hash 值,根绝hash 值得
+到这个元素在数组中的位置(下标),如果该数组在该位置上已经存放了其他元素,那么在这个
+位置上的元素将以链表的形式存放,新加入的放在链头,最先加入的放入链尾.如果数组中该
+位置没有元素,就直接将该元素放到数组的该位置上.
+需要注意Jdk 1.8 中对HashMap 的实现做了优化,当链表中的节点数据超过八个之后,该链表
+会转为红黑树来提高查询效率,从原来的O(n)到O(logn)
+
+### 你了解Fail-Fast 机制吗？
+Fail-Fast 即我们常说的快速失败，
+
+### Fail-fast 和Fail-safe 有什么区别
+
+Iterator 的fail-fast 属性与当前的集合共同起作用，因此它不会受到集合中任何改动的影响。
+Java.util 包中的所有集合类都被设计为fail->fast 的，而java.util.concurrent 中的集合类都为
+fail-safe 的。当检测到正在遍历的集合的结构被改变时， Fail-fast 迭代器抛出
+ConcurrentModificationException ， 而fail-safe 迭代器从不抛出
+ConcurrentModificationException。
