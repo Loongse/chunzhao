@@ -1,2 +1,1 @@
-include ':app'
-rootProject.name = "ASMLifeCycleDemo"
+include ':app', ':asm_lifecycle_plugin'

@@ -1,26 +1,13 @@
-apply plugin : 'com.android.application'
-//下面这个指的是配置文件名称
-apply plugin :'danny.asm.lifecycle'
-buildscript {
-    repositories {
-        google()
-        jcenter()
-        //自定义maven地址
-        maven{
-            url '../asm_lifecycle_repo'
-        }
-    }
-    dependencies {
-        //加载自定义插件 group+module+version
-        classpath 'danny.lifecycle.plugin:asm_lifecycle_plugin:1.0.0'
-    }
+plugins {
+    id 'com.android.application'
 }
+
 android {
     compileSdkVersion 30
     buildToolsVersion "30.0.3"
 
     defaultConfig {
-        applicationId "com.loong.asmlifecycledemo"
+        applicationId "com.loong.recyclerandlistview"
         minSdkVersion 19
         targetSdkVersion 30
         versionCode 1
@@ -45,6 +32,7 @@ dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'com.google.android.material:material:1.2.1'
+    implementation "androidx.recyclerview:recyclerview:1.1.0"
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
