@@ -27,7 +27,7 @@ public class Main03 {
 
     private static int search(int n, int startX, int startY, int endX, int endY, ArrayList<ArrayList<Integer>> list) {
         int sum = 0;//路径长
-        
+
     }
 
     private static Integer parse(char charAt) {
