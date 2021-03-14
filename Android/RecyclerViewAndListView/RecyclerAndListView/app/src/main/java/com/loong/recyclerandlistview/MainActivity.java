@@ -3,6 +3,7 @@ package com.loong.recyclerandlistview;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+import android.os.Parcelable;
 
 public class MainActivity extends AppCompatActivity {
 
